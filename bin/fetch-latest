@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+
+Kernel.trap(:INT) do
+  exit 1
+end
+
+require 'rubygems'
+
+$:.unshift File.expand_path("../../lib", __FILE__)
+
+require 'gem_fetcher'
+require 'fileutils'
+
+staging_dir = File.expand_path("~/.mirror-tools-test/staging/")
+prod_dir = File.expand_path("~/.mirror-tools-test/prod/gems")
+FileUtils.mkdir_p staging_dir
+FileUtils.mkdir_p prod_dir
+
+
+GemFetcher.configure do |conf|
+  conf.staging_dir = staging_dir
+  conf.production_dir = prod_dir
+end
+
+GemFetcher::Controller.new(GemFetcher.config).run
