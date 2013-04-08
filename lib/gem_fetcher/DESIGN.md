@@ -161,6 +161,11 @@ This caused a stack overflow for me when run without modification:
         gzip @prerelease_specs_index
 ```
 
+#### Index Format
+
+```ruby
+  specs_index << [spec.name, spec.version, platform]
+```
 
 # Redesign Proposal
 

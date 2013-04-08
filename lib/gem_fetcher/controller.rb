@@ -1,6 +1,8 @@
 require 'gem_fetcher/remote_source'
+require 'gem_fetcher/chunk_importer'
 
 module GemFetcher
+
   class Controller
 
     attr_reader :config
@@ -22,8 +24,9 @@ module GemFetcher
     end
 
     def run
-      stager = Stager.new(config.staging_dir, next_chunk)
-      stager.stage_gems
+      importer = ChunkImporter.new(next_chunk)
+      importer.stage
+      importer.import
     end
 
   end

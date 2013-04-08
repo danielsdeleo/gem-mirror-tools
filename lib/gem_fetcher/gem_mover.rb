@@ -1,5 +1,6 @@
 
 module GemFetcher
+
   class GemMover
 
     RUBY = "ruby".freeze
@@ -7,25 +8,94 @@ module GemFetcher
     attr_reader :gem_base_name
     attr_reader :uri
     attr_reader :fetcher
+    attr_reader :gem_info_tuple
+    attr_reader :name
+    attr_reader :version
+    attr_reader :platform
 
     def initialize(gem_info_tuple)
-      name, version, platform = gem_info_tuple
+      @gem_info_tuple = gem_info_tuple
+      @name, @version, @platform = gem_info_tuple
       @gem_base_name = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gem"
       @uri = "https://rubygems.org/gems/#{gem_base_name}"
       @fetcher = Fetcher.new
+      @config = config
     end
 
-    def write_gem_to(base_path)
-      path = File.join(base_path, gem_base_name)
-      puts "writing gem #{gem_base_name} to #{path}"
+    def config
+      GemFetcher.config
+    end
+
+    ## FILE SHUFFLING
+
+    def stage_gem
+      path = staging_gem_path
+      log "writing gem #{gem_base_name} to #{path}"
       write_file(gem_data, path)
     end
 
-    def write_quick_marshal_to(base_path)
-      basename = "#{indexable_spec.original_name}.gemspec.rz"
-      path = File.join(base_path, basename)
-      puts "writing quick marshal file for #{gem_base_name} to #{path}"
+    def stage_quick_marshal
+      path = staging_quick_marshal_path
+      log "writing quick marshal file for #{gem_base_name} to #{path}"
       write_file(zipped_marshaled_spec, path)
+    end
+
+    def import_gem
+      log "moving #{gem_base_name} from staging to #{prod_gem_path}"
+      FileUtils.mkdir_p(File.dirname(prod_gem_path))
+      FileUtils.mv(staging_gem_path, prod_gem_path)
+    end
+
+    def import_quick_marshal
+      log "moving quick marshal file for #{gem_base_name} from staging to #{prod_quick_marshal_path}"
+      FileUtils.mkdir_p(File.dirname(prod_quick_marshal_path))
+      FileUtils.mv(staging_quick_marshal_path, prod_quick_marshal_path)
+    end
+
+    def staging_gem_path
+      File.join(staging_gem_dir, gem_base_name)
+    end
+
+    def staging_quick_marshal_path
+      basename = "#{indexable_spec.original_name}.gemspec.rz"
+      File.join(staging_quick_marshal_dir, basename)
+    end
+
+    def intermediate_path
+      basename_sans_ext = File.basename(gem_base_name, ".gem")
+      intermediate_dir1 = basename_sans_ext[0...2]
+      intermediate_dir2 = basename_sans_ext[0...4]
+      File.join(intermediate_dir1, intermediate_dir2)
+    end
+
+    def prod_gem_path
+      File.join(prod_gem_dir, intermediate_path, gem_base_name)
+    end
+
+    def prod_quick_marshal_path
+      File.join(prod_gem_dir, intermediate_path, "#{indexable_spec.original_name}.gemspec.rz")
+    end
+
+    def staging_gem_dir
+      @gem_dir ||= File.join(config.staging_dir, "gems")
+    end
+
+    def staging_quick_marshal_dir
+      @quick_marshal_dir ||= File.join(config.staging_dir, "quick/Marshal.4.8")
+    end
+
+    def prod_gem_dir
+      @prod_gem_dir ||= File.join(config.production_dir, "gems")
+    end
+
+    def prod_quick_marshal_dir
+      @prod_quick_marshal_dir ||= File.join(config.production_dir, "quick/Marshal.4.8")
+    end
+
+    ## INDEX EXTRACTOR
+
+    def prerelease?
+      indexable_spec.version.prerelease?
     end
 
     def zipped_marshaled_spec
@@ -80,7 +150,7 @@ module GemFetcher
       raise
     end
 
-    def puts(string)
+    def log(string)
       $stdout.print("#{string}\n")
     end
 
