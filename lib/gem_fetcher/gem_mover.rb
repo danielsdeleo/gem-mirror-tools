@@ -45,7 +45,7 @@ module GemFetcher
       else
         blacklist!("Gem #{gem_base_name} could not be fetched from upstream")
       end
-    rescue Psych::SyntaxError => e
+    rescue Psych::SyntaxError, Gem::Package::FormatError => e
       blacklist!(e)
     rescue ArgumentError => e
       # ArgumentError is pretty generic :(
