@@ -31,7 +31,7 @@ module GemFetcher
       mv_spec_index_update("specs.4.8")
       mv_spec_index_update("prerelease_specs.4.8")
       mv_spec_index_update("latest_specs.4.8")
-      mv_index_update("blacklisted_specs.4.8")
+      mv_spec_index_update("blacklisted_specs.4.8")
     end
 
     def add_gem(gem)
