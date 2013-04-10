@@ -1,5 +1,6 @@
 require 'gem_fetcher/remote_source'
 require 'gem_fetcher/chunk_importer'
+require 'gem_fetcher/spec_indexes'
 
 module GemFetcher
 
@@ -8,11 +9,13 @@ module GemFetcher
     attr_reader :config
     attr_reader :pool
     attr_reader :remote_gems
+    attr_reader :spec_indexes
 
     def initialize(config)
       @config = config
       @remote_gems = RemoteSource.new(config)
       @chunk_index = 0
+      @spec_indexes = SpecIndexes.new
     end
 
     def chunk_size
@@ -31,7 +34,7 @@ module GemFetcher
 
     def run
       until (chunk = next_chunk).empty?
-        importer = ChunkImporter.new(chunk)
+        importer = ChunkImporter.new(spec_indexes, chunk)
         importer.import
       end
     end

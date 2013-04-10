@@ -17,11 +17,17 @@ module GemFetcher
     # the gems we fetch (and we're writing the gem to potentially slow
     # storage when we're done).
     def fetch(uri)
+      tries ||= 0
       req = Net::HTTP::Get.new URI.parse(uri).path
 
       @http.request(URI(uri), req) do |resp|
         return handle_response(resp)
       end
+    rescue Errno::ETIMEDOUT
+      raise if tries > 5
+      sleep(1 << tries)
+      tries += 1
+      retry
     end
 
     # Handle an http response, follow redirects, etc. returns true if a file was
