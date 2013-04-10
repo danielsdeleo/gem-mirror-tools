@@ -37,23 +37,29 @@ module GemFetcher
     ## FILE SHUFFLING
 
     def stage
-      gem_data = fetcher.fetch(uri)
-      spec = extract_spec(gem_data)
-      @original_name = spec.original_name
-      stage_gem(gem_data)
-      stage_quick_marshal(spec)
+      if gem_data = fetcher.fetch(uri)
+        spec = extract_spec(gem_data)
+        @original_name = spec.original_name
+        stage_gem(gem_data)
+        stage_quick_marshal(spec)
+      else
+        blacklist!("Gem #{gem_base_name} could not be fetched from upstream")
+      end
     rescue Psych::SyntaxError => e
-      log "blacklisting #{gem_base_name} because #{e}"
-      @blacklisted = true
+      blacklist!(e)
     rescue ArgumentError => e
       # ArgumentError is pretty generic :(
       # So we check for UTF-8 by grepping the message.
       if e.message.include?("invalid byte sequence in UTF-8")
-        log "blacklisting #{gem_base_name} because #{e}"
-        @blacklisted = true
+        blacklist!(e)
       else
         raise
       end
+    end
+
+    def blacklist!(reason)
+      log "blacklisting #{gem_base_name} because #{reason}"
+      @blacklisted = true
     end
 
     def stage_gem(gem_data)

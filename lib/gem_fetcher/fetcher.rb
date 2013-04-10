@@ -34,13 +34,14 @@ module GemFetcher
     # downloaded, false if a 304. Raise Error on unknown responses.
     def handle_response(response)
       case response.code.to_i
-      when 304
       when 302
         fetch(response['location'])
+      when 404
+        nil
       when 200
         response.body
       else
-        raise Error, "unexpected response #{resp.inspect}"
+        raise Error, "unexpected response #{response.inspect}"
       end
       # TODO rescue http errors and reraise cleanly
     end
