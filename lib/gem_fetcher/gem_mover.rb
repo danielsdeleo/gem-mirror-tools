@@ -42,8 +42,18 @@ module GemFetcher
       @original_name = spec.original_name
       stage_gem(gem_data)
       stage_quick_marshal(spec)
-    rescue Psych::SyntaxError
+    rescue Psych::SyntaxError => e
+      log "blacklisting #{gem_base_name} because #{e}"
       @blacklisted = true
+    rescue ArgumentError => e
+      # ArgumentError is pretty generic :(
+      # So we check for UTF-8 by grepping the message.
+      if e.message.include?("invalid byte sequence in UTF-8")
+        log "blacklisting #{gem_base_name} because #{e}"
+        @blacklisted = true
+      else
+        raise
+      end
     end
 
     def stage_gem(gem_data)
