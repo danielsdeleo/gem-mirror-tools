@@ -1,5 +1,13 @@
+require 'zlib'
+require 'set'
+
 module GemFetcher
   class SpecIndexes
+
+    def initialize
+      @released_specs_index = nil
+      @prerelease_specs_index = nil
+    end
 
     def config
       GemFetcher.config
@@ -10,7 +18,7 @@ module GemFetcher
     end
 
     def include?(gem)
-      released_specs_index.include?(gem.gem_info_tuple)
+      released_specs_set.include?(gem.gem_info_tuple)
     end
 
     def commit_changes
@@ -26,7 +34,7 @@ module GemFetcher
       if gem.prerelease?
         prerelease_specs_index << gem.gem_info_tuple
       else
-        released_specs_index << gem.gem_info_tuple
+        released_specs_set << gem.gem_info_tuple
       end
       if current_latest_version = latest_specs_by_gem[gem.name]
         case gem.indexable_spec.version <=> current_latest_version[:version]
@@ -46,8 +54,17 @@ module GemFetcher
     end
 
     def released_specs_index
-      @released_specs_index ||= read_spec_index("specs.4.8")
+      released_specs_set.to_a
     end
+
+    def released_specs_set
+      if @released_specs_set.nil?
+        specs_index = read_spec_index("specs.4.8")
+        @released_specs_set = Set.new(specs_index)
+      end
+      @released_specs_set
+    end
+
 
     def latest_specs_index
       latest_specs_by_gem.values.inject([]) {|index, i| index.concat(i[:info_tuples])}
