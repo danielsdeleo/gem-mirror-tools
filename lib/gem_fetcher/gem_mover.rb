@@ -12,6 +12,7 @@ module GemFetcher
     attr_reader :name
     attr_reader :version
     attr_reader :platform
+    attr_reader :original_name
 
     def initialize(gem_info_tuple)
       @gem_info_tuple = gem_info_tuple
@@ -20,6 +21,7 @@ module GemFetcher
       @uri = "https://rubygems.org/gems/#{gem_base_name}"
       @fetcher = Fetcher.new
       @config = config
+      @original_name = nil
     end
 
     def config
@@ -28,16 +30,25 @@ module GemFetcher
 
     ## FILE SHUFFLING
 
-    def stage_gem
+    def stage
+      gem_data = fetcher.fetch(uri)
+      spec = extract_spec(gem_data)
+      @original_name = spec.original_name
+      stage_gem(gem_data)
+      stage_quick_marshal(spec)
+    end
+
+    def stage_gem(gem_data)
       path = staging_gem_path
       log "writing gem #{gem_base_name} to #{path}"
       write_file(gem_data, path)
     end
 
-    def stage_quick_marshal
+    def stage_quick_marshal(spec)
       path = staging_quick_marshal_path
       log "writing quick marshal file for #{gem_base_name} to #{path}"
-      write_file(zipped_marshaled_spec, path)
+      quick_marshal_data = zipped_marshaled_spec(spec)
+      write_file(quick_marshal_data, path)
     end
 
     def import_gem
@@ -57,7 +68,9 @@ module GemFetcher
     end
 
     def staging_quick_marshal_path
-      basename = "#{indexable_spec.original_name}.gemspec.rz"
+      # ugh.
+      raise "gem original name not extracted from spec" if @original_name.nil?
+      basename = "#{@original_name}.gemspec.rz"
       File.join(staging_quick_marshal_dir, basename)
     end
 
@@ -73,7 +86,8 @@ module GemFetcher
     end
 
     def prod_quick_marshal_path
-      File.join(prod_gem_dir, intermediate_path, "#{indexable_spec.original_name}.gemspec.rz")
+      raise "gem original name not extracted from spec" if @original_name.nil?
+      File.join(prod_gem_dir, intermediate_path, "#{@original_name}.gemspec.rz")
     end
 
     def staging_gem_dir
@@ -92,23 +106,20 @@ module GemFetcher
       @prod_quick_marshal_dir ||= File.join(config.production_dir, "quick/Marshal.4.8")
     end
 
-    ## INDEX EXTRACTOR
+    ## SPEC EXTRACTOR
 
     def prerelease?
-      indexable_spec.version.prerelease?
+      version.prerelease?
     end
 
-    def zipped_marshaled_spec
+    def zipped_marshaled_spec(full_spec)
+      indexable_spec = sanitize_spec(full_spec)
       marshaled = Marshal.dump(indexable_spec)
       Zlib::Deflate.deflate(marshaled)
     end
 
-    def indexable_spec
-      @indexable_spec ||= sanitized_spec
-    end
-
-    def sanitized_spec
-      spec = abbreviated_spec
+    def sanitize_spec(full_spec)
+      spec = abbreviate_spec(full_spec)
       spec.summary              = sanitize_string(spec.summary)
       spec.description          = sanitize_string(spec.description)
       spec.post_install_message = sanitize_string(spec.post_install_message)
@@ -117,8 +128,7 @@ module GemFetcher
       spec
     end
 
-    def abbreviated_spec
-      spec = full_spec
+    def abbreviate_spec(spec)
       spec.files = []
       spec.test_files = []
       spec.rdoc_options = []
@@ -127,12 +137,8 @@ module GemFetcher
       spec
     end
 
-    def full_spec
+    def extract_spec(gem_data)
       Gem::Format.from_io(StringIO.new(gem_data)).spec
-    end
-
-    def gem_data
-      @gem_data ||= fetcher.fetch(uri)
     end
 
     def sanitize_string(string)

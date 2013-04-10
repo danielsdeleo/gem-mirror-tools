@@ -14,7 +14,6 @@ module GemFetcher
       @gems = gems
       @pool = Pool.new(10)
 
-      @latest_specs_by_gem = nil
       @new_gems = nil
     end
 
@@ -67,13 +66,21 @@ module GemFetcher
       log "Release gems: #{released_specs_index.size}"
       log "Prerelease:   #{prerelease_specs_index.size}"
       log "Latest gems:  #{latest_specs_index.size}"
+
+      cleanup_refs!
+    end
+
+    def cleanup_refs!
+      @gems = nil
+      @new_gems = nil
+      @pool = nil
+      GC.start
     end
 
     def stage_gems
-      gems.each do |gem|
+      new_gems.each do |gem|
         pool.job do
-          gem.stage_gem
-          gem.stage_quick_marshal
+          gem.stage
         end
       end
       pool.run_til_done

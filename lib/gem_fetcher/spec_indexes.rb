@@ -37,7 +37,7 @@ module GemFetcher
         released_specs_set << gem.gem_info_tuple
       end
       if current_latest_version = latest_specs_by_gem[gem.name]
-        case gem.indexable_spec.version <=> current_latest_version[:version]
+        case gem.version <=> current_latest_version[:version]
         when -1 # gem's version is less than current_latest_version[:version]
           # skip it
         when 0 # gem's version == current_latest_version[:version]

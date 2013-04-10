@@ -36,8 +36,6 @@ module GemFetcher
       until (chunk = next_chunk).empty?
         importer = ChunkImporter.new(spec_indexes, chunk)
         importer.import
-        chunk = nil
-        GC.start
       end
     end
 
