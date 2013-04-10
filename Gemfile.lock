@@ -2,9 +2,11 @@ GEM
   remote: https://rubygems.org/
   specs:
     fast_xs (0.8.0)
+    net-http-persistent (2.8)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   fast_xs
+  net-http-persistent
