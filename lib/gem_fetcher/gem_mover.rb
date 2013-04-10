@@ -22,10 +22,16 @@ module GemFetcher
       @fetcher = Fetcher.new
       @config = config
       @original_name = nil
+      @blacklisted = false
     end
 
     def config
       GemFetcher.config
+    end
+
+    # Lots of gems with corrupt YAML or other issues that make them unusable.
+    def blacklisted?
+      @blacklisted
     end
 
     ## FILE SHUFFLING
@@ -36,6 +42,8 @@ module GemFetcher
       @original_name = spec.original_name
       stage_gem(gem_data)
       stage_quick_marshal(spec)
+    rescue Psych::SyntaxError
+      @blacklisted = true
     end
 
     def stage_gem(gem_data)

@@ -5,8 +5,10 @@ module GemFetcher
   class SpecIndexes
 
     def initialize
-      @released_specs_index = nil
+      @released_specs_set = nil
       @prerelease_specs_index = nil
+      @blacklist_specs_set = nil
+      @latest_specs_by_gem = nil
     end
 
     def config
@@ -18,16 +20,18 @@ module GemFetcher
     end
 
     def include?(gem)
-      released_specs_set.include?(gem.gem_info_tuple)
+      released_specs_set.include?(gem.gem_info_tuple) || blacklist_specs_set.include?(gem.gem_info_tuple)
     end
 
     def commit_changes
       write_spec_index_update("specs.4.8", released_specs_index)
       write_spec_index_update("prerelease_specs.4.8", prerelease_specs_index)
       write_spec_index_update("latest_specs.4.8", latest_specs_index)
+      write_spec_index_update("blacklisted_specs.4.8", blacklist_specs_index)
       mv_spec_index_update("specs.4.8")
       mv_spec_index_update("prerelease_specs.4.8")
       mv_spec_index_update("latest_specs.4.8")
+      mv_index_update("blacklisted_specs.4.8")
     end
 
     def add_gem(gem)
@@ -53,6 +57,22 @@ module GemFetcher
       end
     end
 
+    def add_blacklisted_gem(gem)
+      blacklist_specs_set << gem.gem_info_tuple
+    end
+
+    def blacklist_specs_index
+      blacklist_specs_set.to_a
+    end
+
+    def blacklist_specs_set
+      if @blacklist_specs_set.nil?
+        specs_index = read_spec_index("blacklisted_specs.4.8")
+        @blacklist_specs_set = Set.new(specs_index)
+      end
+      @blacklist_specs_set
+    end
+
     def released_specs_index
       released_specs_set.to_a
     end
@@ -64,7 +84,6 @@ module GemFetcher
       end
       @released_specs_set
     end
-
 
     def latest_specs_index
       latest_specs_by_gem.values.inject([]) {|index, i| index.concat(i[:info_tuples])}

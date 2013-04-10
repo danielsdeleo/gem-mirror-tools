@@ -88,9 +88,13 @@ module GemFetcher
 
     def import_staged_gems
       new_gems.each do |gem|
-        gem.import_gem
-        gem.import_quick_marshal
-        add_gem_to_indexes(gem)
+        if gem.blacklisted?
+          add_gem_to_blacklist_index(gem)
+        else
+          gem.import_gem
+          gem.import_quick_marshal
+          add_gem_to_indexes(gem)
+        end
       end
     end
 
@@ -100,6 +104,10 @@ module GemFetcher
 
     def add_gem_to_indexes(gem)
       spec_indexes.add_gem(gem)
+    end
+
+    def add_gem_to_blacklist_index(gem)
+      spec_indexes.add_blacklisted_gem(gem)
     end
 
     def path_to_gem(file_name)
