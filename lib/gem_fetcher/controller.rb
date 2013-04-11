@@ -29,7 +29,7 @@ module GemFetcher
     def next_chunk
       chunk = available_gems[@chunk_index, chunk_size]
       @chunk_index += chunk_size
-      chunk
+      chunk || [] # Array#[] returns nil when you fall off the end
     end
 
     def run
