@@ -111,7 +111,7 @@ module GemFetcher
 
     def prod_quick_marshal_path
       raise "gem original name not extracted from spec" if @original_name.nil?
-      File.join(prod_gem_dir, intermediate_path, "#{@original_name}.gemspec.rz")
+      File.join(prod_quick_marshal_dir, intermediate_path, "#{@original_name}.gemspec.rz")
     end
 
     def staging_gem_dir

@@ -50,7 +50,7 @@ module GemFetcher
 
     def import
       if new_gems.empty?
-        log "no new gems in chunk"
+        debug "no new gems in chunk"
         return
       end
 
