@@ -43,6 +43,7 @@ class IndexCache
 
   include Singleton
   include IndexedPaths
+  include Logging
 
   class << self
     attr_accessor :settings
