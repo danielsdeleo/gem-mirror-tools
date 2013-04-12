@@ -15,6 +15,14 @@ disable :protection
 
 RUBY = "ruby".freeze
 
+module Logging
+
+  def log(msg)
+    $stdout.print("#{msg}\n")
+  end
+
+end
+
 module IndexedPaths
   def subdir_path_to(indexed_file)
     index1, index2 = indexed_file[0,2], indexed_file[0,4]
@@ -118,10 +126,7 @@ IndexCache.settings = settings
 IndexCache.instance
 
 include IndexedPaths
-
-def log(msg)
-  $stdout.print("#{msg}\n")
-end
+include Logging
 
 %w[/specs.4.8.gz
    /latest_specs.4.8.gz
