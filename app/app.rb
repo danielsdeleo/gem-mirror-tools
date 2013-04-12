@@ -105,6 +105,7 @@ class IndexCache
     end
   end
 end
+IndexCache.instance
 
 include IndexedPaths
 
@@ -142,7 +143,9 @@ end
 
 get '/api/v1/dependencies' do
   query_gems = params[:gems].to_s.split(',')
-  deps = query_gems.inject([]){|memo, query_gem| memo.concat(dependencies_of(query_gem)) }
+  deps = query_gems.inject([]) do |memo, query_gem|
+    memo.concat(IndexCache.instance.dependencies_of(query_gem))
+  end
   Marshal.dump(deps)
 end
 
