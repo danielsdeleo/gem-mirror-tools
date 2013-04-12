@@ -30,7 +30,7 @@ def released_specs_by_gem
   if @released_specs_map.nil?
     @released_specs_map = {}
     read_spec_index("specs.4.8").each do |name, version, platform|
-      released_specs_map[name] ||= []
+      @released_specs_map[name] ||= []
       gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
       @released_specs_map[name] << gem_filename
     end
