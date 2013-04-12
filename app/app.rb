@@ -14,8 +14,7 @@ disable :protection
 RUBY = "ruby".freeze
 
 def subdir_path_to(indexed_file)
-  indexable_part = indexed_file.split('-')[0..-2].join('-')
-  index1, index2 = indexable_part[0,2], indexable_part[0,4]
+  index1, index2 = indexed_file[0,2], indexed_file[0,4]
   File.join(index1, index2, indexed_file)
 end
 
@@ -28,22 +27,26 @@ def expand_path(*components)
 end
 
 def released_specs_by_gem
-  released_specs_map = {}
-  read_spec_index("specs.4.8.gz").each do |name, version, platform|
-    released_specs_map[name] ||= []
-    gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
-    released_specs_map[name] << gem_filename
+  if @released_specs_map.nil?
+    @released_specs_map = {}
+    read_spec_index("specs.4.8.gz").each do |name, version, platform|
+      released_specs_map[name] ||= []
+      gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
+      @released_specs_map[name] << gem_filename
+    end
   end
-  released_specs_map
+  @released_specs_map
 end
 
 def read_spec_index(basename)
   path = File.join(settings.gem_dir, "#{basename}.gz")
-  if File.exist?(path)
-    log "loading spec index #{basename} from #{path}"
-    Marshal.load(gunzip(path))
-  else
-    []
+  log "loading spec index #{basename} from #{path}"
+  Marshal.load(gunzip(path))
+end
+
+def gunzip(file)
+  File.open(file, "r") do |data|
+    Zlib::GzipReader.new(data).read
   end
 end
 
@@ -57,9 +60,9 @@ def deps_info_for(gemspec_filename)
   gem = read_quick_spec(gemspec_filename)
   {
     :name => gem.name,
-    :number => gem.number.version,
+    :number => gem.version.to_s,
     :platform => gem.platform,
-    :dependencies => runtime_dependencies(spec)
+    :dependencies => gem.runtime_dependencies.map {|d| [d.name, d.requirement.to_s] }
   }
 end
 
