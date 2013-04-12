@@ -32,8 +32,17 @@ module IndexedPaths
 end
 
 class IndexCache
+
   include Singleton
   include IndexedPaths
+
+  class << self
+    attr_accessor :settings
+  end
+
+  def settings
+    self.class.settings
+  end
 
   def initialize
     @spec_index_update_mutex = Mutex.new
@@ -105,6 +114,7 @@ class IndexCache
     end
   end
 end
+IndexCache.settings = settings
 IndexCache.instance
 
 include IndexedPaths
