@@ -2,6 +2,8 @@ require 'zlib'
 require 'sinatra'
 require 'sinatra/xsendfile'
 require 'sinatra/config_file'
+require 'singleton'
+require 'thread'
 
 configure do
   set :gem_dir, File.expand_path(Dir.pwd)
@@ -13,66 +15,98 @@ disable :protection
 
 RUBY = "ruby".freeze
 
-def subdir_path_to(indexed_file)
-  index1, index2 = indexed_file[0,2], indexed_file[0,4]
-  File.join(index1, index2, indexed_file)
-end
-
-def expand_path(*components)
-  full_path = File.expand_path(File.join(settings.gem_dir, *components))
-  unless full_path.include?(settings.gem_dir)
-    halt 400, "nope #{request.path_info}"
+module IndexedPaths
+  def subdir_path_to(indexed_file)
+    index1, index2 = indexed_file[0,2], indexed_file[0,4]
+    File.join(index1, index2, indexed_file)
   end
-  full_path
-end
 
-def released_specs_by_gem
-  if @released_specs_map.nil?
-    @released_specs_map = {}
-    read_spec_index("specs.4.8").each do |name, version, platform|
-      @released_specs_map[name] ||= []
-      gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
-      @released_specs_map[name] << gem_filename
+  def expand_path(*components)
+    full_path = File.expand_path(File.join(settings.gem_dir, *components))
+    if full_path.include?(settings.gem_dir)
+      full_path
+    else
+      nil
     end
   end
-  @released_specs_map
 end
 
-def read_spec_index(basename)
-  path = File.join(settings.gem_dir, "#{basename}.gz")
-  log "loading spec index #{basename} from #{path}"
-  Marshal.load(gunzip(path))
-end
+class IndexCache
+  include Singleton
+  include IndexedPaths
 
-def gunzip(file)
-  File.open(file, "r") do |data|
-    Zlib::GzipReader.new(data).read
+  def initialize
+    @spec_index_update_mutex = Mutex.new
+    @released_specs_map = nil
+    @spec_index_mtime = nil
+    reset!
+  end
+
+  def reset!
+    @spec_index_update_mutex.synchronize do
+      @spec_index_mtime = current_spec_index_mtime
+      released_specs_map = {}
+      read_spec_index("specs.4.8").each do |name, version, platform|
+        released_specs_map[name] ||= []
+        gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
+        released_specs_map[name] << gem_filename
+      end
+      @released_specs_map = released_specs_map
+    end
+  end
+
+  def released_specs_by_gem
+    unless current_spec_index_mtime == @spec_index_mtime
+      reset!
+    end
+    @released_specs_map
+  end
+
+  def current_spec_index_mtime
+    File.stat(spec_index_path).mtime
+  end
+
+  def spec_index_path
+    File.join(settings.gem_dir, "specs.4.8.gz")
+  end
+
+  def read_spec_index
+    log "loading spec index from #{spec_index_path}"
+    Marshal.load(gunzip(spec_index_path))
+  end
+
+  def gunzip(file)
+    File.open(file, "r") do |data|
+      Zlib::GzipReader.new(data).read
+    end
+  end
+
+  def read_quick_spec(gemspec_basename)
+    gemspec_file_path = expand_path("quick/Marshal.4.8", subdir_path_to(gemspec_basename))
+    marshal_data = Zlib::Inflate.inflate(IO.read(gemspec_file_path))
+    Marshal.load(marshal_data)
+  end
+
+  def deps_info_for(gemspec_filename)
+    gem = read_quick_spec(gemspec_filename)
+    {
+      :name => gem.name,
+      :number => gem.version.to_s,
+      :platform => gem.platform,
+      :dependencies => gem.runtime_dependencies.map {|d| [d.name, d.requirement.to_s] }
+    }
+  end
+
+  def dependencies_of(gem)
+    # rubygems.org returns empty list for non-existent gems
+    gem_filenames = released_specs_by_gem[gem] || []
+    gem_filenames.map do |gemspec_filename|
+      deps_info_for(gemspec_filename)
+    end
   end
 end
 
-def read_quick_spec(gemspec_basename)
-  gemspec_file_path = expand_path("quick/Marshal.4.8", subdir_path_to(gemspec_basename))
-  marshal_data = Zlib::Inflate.inflate(IO.read(gemspec_file_path))
-  Marshal.load(marshal_data)
-end
-
-def deps_info_for(gemspec_filename)
-  gem = read_quick_spec(gemspec_filename)
-  {
-    :name => gem.name,
-    :number => gem.version.to_s,
-    :platform => gem.platform,
-    :dependencies => gem.runtime_dependencies.map {|d| [d.name, d.requirement.to_s] }
-  }
-end
-
-def dependencies_of(gem)
-  # rubygems.org returns empty list for non-existent gems
-  gem_filenames = released_specs_by_gem[gem] || []
-  gem_filenames.map do |gemspec_filename|
-    deps_info_for(gemspec_filename)
-  end
-end
+include IndexedPaths
 
 def log(msg)
   $stdout.print("#{msg}\n")
