@@ -55,7 +55,7 @@ class IndexCache
     @spec_index_update_mutex.synchronize do
       @spec_index_mtime = current_spec_index_mtime
       released_specs_map = {}
-      read_spec_index("specs.4.8").each do |name, version, platform|
+      read_spec_index.each do |name, version, platform|
         released_specs_map[name] ||= []
         gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
         released_specs_map[name] << gem_filename
