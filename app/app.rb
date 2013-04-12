@@ -1,5 +1,8 @@
 require 'sinatra'
 require 'sinatra/xsendfile'
+require 'sinatra/config_file'
+
+config_file "config.yml"
 
 configure do
   set :gem_dir, File.expand_path(Dir.pwd)
