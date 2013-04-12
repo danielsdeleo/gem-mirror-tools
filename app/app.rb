@@ -34,6 +34,7 @@ def released_specs_by_gem
     gem_filename = "#{name}-#{version}#{"-#{platform}" unless platform == RUBY}.gemspec.rz"
     released_specs_map[name] << gem_filename
   end
+  released_specs_map
 end
 
 def read_spec_index(basename)
