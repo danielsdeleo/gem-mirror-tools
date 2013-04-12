@@ -93,7 +93,7 @@ end
 get "/quick/Marshal.4.8/:quick_spec"  do |quick_spec|
   content_type('application/x-deflate')
   indexed_path = subdir_path_to(quick_spec)
-  full_path = expand_path("quick/marshal.4.8", indexed_path)
+  full_path = expand_path("quick/Marshal.4.8", indexed_path)
   log "Sending #{full_path}"
   send_file(full_path, :type => response['content-type'])
 end
