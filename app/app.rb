@@ -166,14 +166,9 @@ get '/api/v1/dependencies' do
 end
 
 get '/' do
-  message=<<-EOM
-Total Gems: #{IndexCache.instance.released_specs_by_gem.size}
-Gems:
-EOM
-  IndexCache.instance.released_specs_by_gem.keys.sort.each do |gem_name|
-    message << "  #{gem_name}"
+  IndexCache.instance.released_specs_by_gem.keys.sort.inject("") do |msg, gem_name|
+    msg << "#{gem_name}\n"
   end
-  message
 end
 
 
