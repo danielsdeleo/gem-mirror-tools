@@ -165,4 +165,15 @@ get '/api/v1/dependencies' do
   Marshal.dump(deps)
 end
 
+get '/' do
+  message=<<-EOM
+Total Gems: #{IndexCache.instance.released_specs_by_gem.size}
+Gems:
+EOM
+  IndexCache.instance.released_specs_by_gem.keys.sort.each do |gem_name|
+    message << "  #{gem_name}"
+  end
+  message
+end
+
 
