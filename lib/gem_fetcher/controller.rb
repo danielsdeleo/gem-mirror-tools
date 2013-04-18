@@ -12,6 +12,7 @@ module GemFetcher
     attr_reader :spec_indexes
 
     def initialize()
+      @lockfile = nil
       @remote_gems = nil
       @chunk_index = 0
       @spec_indexes = SpecIndexes.new
@@ -56,9 +57,26 @@ module GemFetcher
       FileUtils.mkdir_p config.production_dir
     end
 
+    def lock
+      lock_path = File.expand_path("gem-fetcher-lock.pid", config.staging_dir)
+      @lockfile = File.open(lock_path, File::RDWR|File::CREAT)
+      if @lockfile.flock(File::LOCK_EX | File::LOCK_NB)
+        $stderr.puts "#{Process.pid} has the lock..."
+        @lockfile.truncate(0)
+        @lockfile.print("#{Process.pid}\n")
+        @lockfile.fsync
+      else
+        $stderr.puts "gem fetcher already running (pid: #{@lockfile.read.strip})."
+        $stderr.puts "exiting"
+        @lockfile.close
+        exit 1
+      end
+    end
+
     def setup
       load_config
       create_paths
+      lock
     end
 
     def import_new_gems
