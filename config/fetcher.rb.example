@@ -1,0 +1,6 @@
+
+GemFetcher.configure do |conf|
+  conf.staging_dir = "~/.mirror-tools-test/staging/"
+  conf.production_dir = "~/.mirror-tools-test/prod/gems"
+end
+
