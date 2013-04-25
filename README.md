@@ -3,6 +3,18 @@ Gem Mirror Tools
 
 Tools for mirroring rubygems.org.
 
+Mirroring
+---------
+
+`bin/fetch-latest`
+
+
+Serving Mirrored Gems
+---------------------
+
+Run the sinatra app under app/
+
+
 Design
 ------
 
